@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+
+    const DEFAULT_SETTINGS = {
+        requireModKey: true
+    };
+    
+    var safariVersion = parseInt(/Safari\/(\d+)/.exec(navigator.appVersion)[1]);
+    
+    initializeSettings();
+    
+    safari.application.addEventListener('message', handleMessage, false);
+    safari.extension.settings.addEventListener('change', handleSettingChange, false);
+    
+    function handleMessage(evt) {
+        if (evt.name == 'passSettings') {
+            evt.target.page.dispatchMessage('settings', JSON.parse(JSON.stringify(safari.extension.settings)));
+        }
+    }
+    function handleSettingChange(evt) {
+        if (evt.newValue != evt.oldValue) {
+            if (evt.key === 'requireModKey') {
+                if (evt.newValue === false && safariVersion >= 600) {
+                    return;
+                }
+            }
+            
+            var settings = JSON.parse(JSON.stringify(safari.extension.settings));
+            var thisWindow;
+            for (var i in safari.application.browserWindows) {
+                thisWindow = safari.application.browserWindows[i];
+                var thisTab;
+                for (var j in thisWindow.tabs) {
+                    thisTab = thisWindow.tabs[j];
+                    if (/^http/.test(thisTab.url)) {
+                        thisTab.page.dispatchMessage('settings', settings);
+                    }
+                }
+            }
+        }
+    }
+    function initializeSettings() {
+        for (var key in DEFAULT_SETTINGS) {
+            if (safari.extension.settings[key] == undefined) {
+                safari.extension.settings[key] = DEFAULT_SETTINGS[key];
+            }
+        }
+        if (safariVersion >= 600) {
+            safari.extension.settings.requireModKey = true;
+        }
+    }
+
+</script>
+</head>
+<body></body>
+</html>
